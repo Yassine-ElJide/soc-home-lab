@@ -29,7 +29,7 @@ flowchart LR
 
 | VM | Role | OS | IP | Wazuh agent |
 | --- | --- | --- | --- | --- |
-| SOC-01 | Wazuh all-in-one (manager, indexer, dashboard) | Ubuntu | _add IP_ | - |
+| SOC-01 | Wazuh all-in-one (manager, indexer, dashboard) | Ubuntu | - | - |
 | DC-01 (VM name DC-Main) | Domain controller `soc.local` (AD DS, DNS, DHCP), 3 vCPU, 4 GB RAM, 50 GB | Windows Server 2016 | 192.168.10.10 | 004 |
 | WIN-01 | Domain workstation | Windows 11 Pro | 192.168.10.20 | 003 |
 | LNX-01 | Linux server (SSH) | Ubuntu 24.04 LTS | 192.168.10.30 | 002 |
@@ -61,19 +61,19 @@ Host: laptop with AMD Ryzen 9 8945HS, Oracle VirtualBox.
 - [x] Wazuh 4.14.2 deployed, 4 agents enrolled (DC-01, WIN-01, LNX-01, IDS-01)
 - [ ] Fix IDS-01 agent connectivity (shown *disconnected* in the screenshot)
 - [ ] Deploy custom rules from this repo and validate them with `wazuh-logtest`
-- [ ] Run the scenarios in [`docs/scenarios.md`](docs/scenarios.md) and record observed results
+- [ ] Run the scenarios in [`docs/scenarios.md`](docs/scenarios.md)
 
 ## Attack scenarios
 Full playbook with triage steps: [`docs/scenarios.md`](docs/scenarios.md).
 
-| # | Scenario | MITRE ATT&CK | Expected detection | Observed |
-| --- | --- | --- | --- | --- |
-| 1 | Network discovery with Nmap | T1046 | Suricata `sid:1000001` → Wazuh | _to run_ |
-| 2 | SSH brute force on LNX-01 | T1110.001 | Wazuh sshd rules 5760 → 5763 (valid user), 5710 → 5712 (unknown user) | _to run_ |
-| 3 | RDP / SMB password spraying on domain accounts | T1110.003 | Windows 4625 → Wazuh 60122 → custom rule 100130, Suricata `sid:1000002-3` | _to run_ |
-| 4 | Kerberoasting (SPN service account) | T1558.003 | Event 4769 with RC4 → custom rule 100110 | _to run_ |
-| 5 | User added to Domain Admins | T1098.007 | Events 4728 / 4732 / 4756 → custom rule 100100 | _to run_ |
-| 6 | Security log cleared | T1070.001 | Event 1102 → custom rule 100120 | _to run_ |
+| # | Scenario | MITRE ATT&CK | Expected detection |
+| --- | --- | --- | --- |
+| 1 | Network discovery with Nmap | T1046 | Suricata `sid:1000001` → Wazuh |
+| 2 | SSH brute force on LNX-01 | T1110.001 | Wazuh sshd rules 5760 → 5763 (valid user), 5710 → 5712 (unknown user) |
+| 3 | RDP / SMB password spraying on domain accounts | T1110.003 | Windows 4625 → Wazuh 60122 → custom rule 100130, Suricata `sid:1000002-3` |
+| 4 | Kerberoasting (SPN service account) | T1558.003 | Event 4769 with RC4 → custom rule 100110 |
+| 5 | User added to Domain Admins | T1098.007 | Events 4728 / 4732 / 4756 → custom rule 100100 |
+| 6 | Security log cleared | T1070.001 | Event 1102 → custom rule 100120 |
 
 ## Screenshots
 | | |
@@ -86,7 +86,7 @@ Full playbook with triage steps: [`docs/scenarios.md`](docs/scenarios.md).
 - Sizing a full SOC stack on one laptop: the Wazuh indexer is the most memory-hungry component, so RAM is planned around SOC-01 first.
 - Agent names are fixed at enrollment: DC-01 shows as `WIN-6C2HILDD4A1` because it was enrolled before the rename.
 - Default Windows audit policy is not enough. Kerberos, credential validation and group management auditing must be enabled by GPO before Wazuh can see those attacks.
-- Custom Wazuh rules must hang off the most specific built-in rule (Wazuh only follows the first matching child), so every rule is checked with `wazuh-logtest`.
+- Custom Wazuh rules must hang off the most specific built-in rule (Wazuh only follows the first matching child), otherwise they never fire.
 
 ## Next steps
 - Add Sysmon on WIN-01 and DC-01 for process-level telemetry
