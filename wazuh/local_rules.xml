@@ -3,38 +3,42 @@
   Detection logic for Active Directory abuse. Validate with:
     sudo /var/ossec/bin/wazuh-logtest
   Rule IDs 100100-100199 are in the user-defined range.
+
+  Each rule hangs off the most specific built-in rule that already catches
+  the event (Wazuh only follows the first matching child rule):
+    4728 -> 60141, 4732 -> 60144, 4756 -> 60151
+    4769 -> 60106 (Windows Logon Success)
+    1102 -> 60117 (Windows audit log was cleared)
 -->
 <group name="local,ad,windows,">
 
-  <!-- T1098 - account added to a privileged group (4728/4732/4756) -->
+  <!-- T1098.007: account added to a privileged group (4728/4732/4756) -->
   <rule id="100100" level="12">
-    <if_sid>60103</if_sid>
-    <field name="win.system.eventID">^4728$|^4732$|^4756$</field>
-    <field name="win.eventdata.targetUserName">Domain Admins|Enterprise Admins|Administrators|Schema Admins</field>
-    <description>AD: account added to a privileged group ($(win.eventdata.targetUserName)) by $(win.eventdata.subjectUserName)</description>
+    <if_sid>60141,60144,60151</if_sid>
+    <field name="win.eventdata.targetUserName" type="pcre2">(?i)^(Domain Admins|Enterprise Admins|Administrators|Schema Admins)$</field>
+    <description>AD: account added to privileged group $(win.eventdata.targetUserName) by $(win.eventdata.subjectUserName)</description>
     <mitre>
-      <id>T1098</id>
+      <id>T1098.007</id>
     </mitre>
     <group>privilege_escalation,</group>
   </rule>
 
-  <!-- T1558.003 - Kerberoasting: 4769 with RC4 (0x17) for a user account -->
+  <!-- T1558.003: Kerberoasting, 4769 with RC4 (0x17) for a user SPN (not a machine account, not krbtgt) -->
   <rule id="100110" level="10">
-    <if_sid>60103</if_sid>
+    <if_sid>60106</if_sid>
     <field name="win.system.eventID">^4769$</field>
     <field name="win.eventdata.ticketEncryptionType">^0x17$</field>
-    <field name="win.eventdata.serviceName" negate="yes">\$$</field>
-    <description>AD: possible Kerberoasting - RC4 service ticket requested for SPN $(win.eventdata.serviceName)</description>
+    <field name="win.eventdata.serviceName" negate="yes" type="pcre2">(?i)\$$|^krbtgt$</field>
+    <description>AD: possible Kerberoasting, RC4 service ticket requested for SPN $(win.eventdata.serviceName) by $(win.eventdata.targetUserName)</description>
     <mitre>
       <id>T1558.003</id>
     </mitre>
     <group>credential_access,</group>
   </rule>
 
-  <!-- T1070.001 - security event log cleared (1102) -->
+  <!-- T1070.001: security event log cleared (1102) -->
   <rule id="100120" level="12">
-    <if_sid>60103</if_sid>
-    <field name="win.system.eventID">^1102$</field>
+    <if_sid>60117</if_sid>
     <description>AD: security event log was cleared on $(win.system.computer)</description>
     <mitre>
       <id>T1070.001</id>
@@ -42,11 +46,12 @@
     <group>defense_evasion,</group>
   </rule>
 
-  <!-- T1110.003 - correlation: many 4625 failures = password spraying -->
+  <!-- T1110.003: password spraying, one source with failures on many DIFFERENT accounts -->
   <rule id="100130" level="10" frequency="8" timeframe="120">
     <if_matched_sid>60122</if_matched_sid>
-    <same_source_ip />
-    <description>AD: possible password spraying - repeated failed logons from $(win.eventdata.ipAddress)</description>
+    <same_field>win.eventdata.ipAddress</same_field>
+    <different_field>win.eventdata.targetUserName</different_field>
+    <description>AD: possible password spraying, failed logons for many accounts from $(win.eventdata.ipAddress)</description>
     <mitre>
       <id>T1110.003</id>
     </mitre>
