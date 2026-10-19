@@ -1,0 +1,42 @@
+name: Lint
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  suricata:
+    name: Suricata rules
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Suricata
+        run: sudo apt-get update -q && sudo apt-get install -y -q suricata
+      - name: Load custom rules in test mode
+        run: |
+          mkdir -p "$RUNNER_TEMP/suricata"
+          sudo suricata -T -c /etc/suricata/suricata.yaml \
+            -S suricata/local.rules -l "$RUNNER_TEMP/suricata"
+
+  wazuh-xml:
+    name: Wazuh XML
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install xmllint
+        run: sudo apt-get update -q && sudo apt-get install -y -q libxml2-utils
+      - name: Check XML is well formed
+        run: xmllint --noout wazuh/*.xml wazuh/*.conf
+
+  markdown:
+    name: Markdown
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: DavidAnson/markdownlint-cli2-action@v16
+        with:
+          globs: "**/*.md"
