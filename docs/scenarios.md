@@ -7,12 +7,14 @@ Targets: DC-01 `192.168.10.10`, WIN-01 `192.168.10.20`, LNX-01 `192.168.10.30`.
 ---
 
 ## 1. Network discovery (T1046)
+
 - **Technique:** host/port scanning across the subnet.
 - **Telemetry:** many new TCP connections (SYN) from one source to many ports/hosts, seen by Suricata on IDS-01.
 - **Detects:** Suricata `sid:1000001` (threshold-based scan signature), forwarded to Wazuh (built-in Suricata rules 86600/86601).
 - **Triage:** confirm source IP, scope (how many hosts/ports), whether it precedes other activity. In this lab the source is always KALI-01.
 
 ## 2. SSH brute force on LNX-01 (T1110.001)
+
 - **Technique:** repeated failed SSH authentication.
 - **Telemetry:** `/var/log/auth.log` failed-password lines, collected by the Wazuh agent.
 - **Detects:** Wazuh built-in sshd rules:
@@ -21,6 +23,7 @@ Targets: DC-01 `192.168.10.10`, WIN-01 `192.168.10.20`, LNX-01 `192.168.10.30`.
 - **Triage:** source IP, targeted usernames, whether any attempt succeeded (rule 5715). Response: block source, review account.
 
 ## 3. RDP / SMB password spraying (T1110.003)
+
 - **Technique:** a few passwords tried against many domain accounts (low and slow to avoid lockout).
 - **Telemetry:**
   - **4625** (failed logon) on the targeted host (WIN-01 or DC-01)
@@ -30,18 +33,21 @@ Targets: DC-01 `192.168.10.10`, WIN-01 `192.168.10.20`, LNX-01 `192.168.10.30`.
 - **Triage:** pivot on source IP and the set of targeted accounts. A spray looks like *one source, many accounts, few attempts each*, unlike a brute force.
 
 ## 4. Kerberoasting (T1558.003)
+
 - **Technique:** requesting Kerberos service tickets for SPN-bearing service accounts to crack them offline.
 - **Telemetry:** event **4769** (Kerberos service ticket) with encryption type **0x17 (RC4)** for a non-machine account.
 - **Detects:** custom Wazuh rule **100110** (see `wazuh/local_rules.xml`).
 - **Triage:** which account requested which SPN, from where. Baseline normal ticket activity to cut false positives. Requires Kerberos auditing enabled (see `setup.md` §6).
 
 ## 5. Persistence: user added to Domain Admins (T1098.007)
+
 - **Technique:** adding an account to a privileged group.
 - **Telemetry:** events **4728 / 4732 / 4756** (member added to a security-enabled global / local / universal group).
 - **Detects:** custom Wazuh rule **100100** scoped to privileged groups (Domain Admins, Enterprise Admins, Administrators, Schema Admins).
 - **Triage:** who made the change, which account was added, was it authorized. High-value, low-noise alert.
 
 ## 6. Defense evasion: security log cleared (T1070.001)
+
 - **Technique:** clearing the Windows Security event log to destroy evidence.
 - **Telemetry:** event **1102** (audit log cleared).
 - **Detects:** built-in Wazuh 60117, raised to level 12 by custom rule **100120**.
@@ -50,7 +56,8 @@ Targets: DC-01 `192.168.10.10`, WIN-01 `192.168.10.20`, LNX-01 `192.168.10.30`.
 ---
 
 ### Triage template
-```
+
+```text
 Alert ID / rule:
 Time (UTC):
 Source → target:
