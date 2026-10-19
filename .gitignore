@@ -1,0 +1,17 @@
+# OS and editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Lab captures and exports: may contain hostnames, accounts or IPs
+*.pcap
+*.pcapng
+*.evtx
+eve.json
+*.log
+
+# Secrets and local overrides
+.env
+*.key
+*.pem
